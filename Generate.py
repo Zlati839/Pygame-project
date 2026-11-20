@@ -131,7 +131,7 @@ class Generate():
              for y, row in enumerate(self.TileList):
                 for x, tile in enumerate(row):
                     if tile == 5:
-                        Chance = rng.randint(1, 3)
+                        Chance = rng.randint(1, 4)
                         if Chance == 2:
                             self.TileList[y][x] = 10
                             self.TileList[y - 1][x] = 11
