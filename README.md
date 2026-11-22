@@ -18,3 +18,10 @@ Yea thats all
 e - Cut down trees nearby 
 w,a,s,d - walk 
 shift - sprint 
+
+## How it was made 
+It was made with pygame and its mostly based around the Map.TileList . There all the tiles info are saved which is a single number Load takes that Number and acording to the number changes the tile 
+
+## Why did i make this kind of a project 
+I wanted it to be something like a 2d Kingdome building game but i still havent got to that part 
+
