@@ -8,7 +8,7 @@ You get wood and seeds by chopping them down and can get slowed down in water al
 ## Map generation
 Its all random.......
 
-## How to play 
+## How to run
 So start the game . Run around and chop trees .
 Yea thats all
 
