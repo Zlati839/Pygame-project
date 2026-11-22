@@ -1,11 +1,13 @@
 # Pygame project or smh like that
 A simple pygame topdown game for now there isnt much just a little terrain generation like water and trees and yea thats all for now just a base line . Its just a simple project about surviving so far 
+<img width="1321" height="792" alt="Screenshot 2026-11-20 221125" src="https://github.com/user-attachments/assets/fe065c29-9481-4988-9e3a-ffc1b4c0fa0c" />
 
 ## Gameplay 
 For now all you can do is destroy the ecosystem by cutting down wood but you can be kind and replant those trees ! 
 You get wood and seeds by chopping them down and can get slowed down in water also all trees grow naturally but you can speed that up
 
 ## Map generation
+
 Its all random.......
 
 ## How to run
