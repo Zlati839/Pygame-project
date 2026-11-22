@@ -1,5 +1,5 @@
 # Pygame project or smh like that
-A simple pygame topdown game for now there isnt much just a little terrain generation like water and trees and yea thats all for now just a base line 
+A simple pygame topdown game for now there isnt much just a little terrain generation like water and trees and yea thats all for now just a base line . Its just a simple project about surviving so far 
 
 ## Gameplay 
 For now all you can do is destroy the ecosystem by cutting down wood but you can be kind and replant those trees ! 
