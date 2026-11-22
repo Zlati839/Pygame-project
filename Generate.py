@@ -7,6 +7,8 @@ class Generate():
         self.LastTriggered = 60
         self.Width = 64
         self.Height = 64
+        self.HighLightI = 0
+        self.HighLightQ = 0
         self.waterSizeX = rng.randint(13, 25)
         self.waterSizeY = rng.randint(13, 25)
         self.waterSizeSmollX = rng.randint(5, 10)
@@ -25,9 +27,13 @@ class Generate():
         self.Seed  = pygame.image.load("TileSet/Sprite-0006.png").convert_alpha()
         self.TreeUP = pygame.image.load("TileSet/TreeUP.png").convert_alpha()
         self.TreeDown = pygame.image.load("TileSet/TreeDown.png").convert_alpha()
+        self.TreeUPlight = pygame.image.load("TileSet/TreeUPLIGHT.png").convert_alpha()
+        self.TreeDownlight = pygame.image.load("TileSet/TreeDownLIGHT.png").convert_alpha()
         self.AlreadyLoaded = False
+        self.lock = False
+        self.Inventory = {}
         self.Generate_random()
-
+        
      def Generate_random(self):
               for i in range(self.Height):
                   rows = []
@@ -89,7 +95,20 @@ class Generate():
                         self.TileList[y][x] = 10
                         self.TileList[y - 1][x] = 11
     
-    
+     def AddItem(self, item, amount=1):
+        self.Inventory[item] = self.Inventory.get(item, 0) + amount
+
+     def HasItem(self, item, amount=1):
+            return self.Inventory.get(item, 0) >= amount
+
+     def RemoveItem(self, item, amount=1):
+      if self.Inventory.get(item, 0) >= amount:
+        self.Inventory[item] -= amount
+        if self.Inventory[item] == 0:
+            del self.Inventory[item]
+        return True
+      return False
+     
      def Load(self, screen , camera):
               CurrentTile = [0,0]
               CurrentImage = None
@@ -113,21 +132,52 @@ class Generate():
                           CurrentImage = self.TreeDown
                       if q == 11 :
                           CurrentImage = self.TreeUP
+                      if q == 12 :
+                          CurrentImage = self.TreeDownlight
+                      if q == 13 :
+                          CurrentImage = self.TreeUPlight
                       screen.blit(CurrentImage, (CurrentTile[0]- camera.offset.x ,CurrentTile[1]- camera.offset.y ))
                       CurrentTile[0] += 64 
                  CurrentTile[1] += 64
                  CurrentTile[0] = 0 
      def CheckTile(self, player):
          x = int(player.pos.x // 64)
+         Xother = int((player.pos.x + player.width - 1) // 64)
          y = int(player.pos.y // 64)
-         if self.TileList[y][x] == -1:
-            return "Water"
+         Yother = int((player.pos.y + player.height - 1) // 64)
+         for y in range(y , Yother + 1):
+             for x in range(x,Xother + 1):
+                if self.TileList[y][x] == -1:
+                    return "Water"
+                if self.TileList[y][x] == 10 or self.TileList[y][x] == 11 or  self.TileList[y][x] == 12 or self.TileList[y][x] == 13:
+                    return "Tree"
+         return "NONE"
+     def CheckClose(self, pos):
+        self.DistanceHighLight = 30000
+        closest = None
+        player_pos = pygame.math.Vector2(pos)
+        for y, row in enumerate(self.TileList):
+            for x, tile in enumerate(row):
+                if tile == 10 or tile == 12 :
+                    self.TileList[y][x] = 10
+                    self.TileList[y - 1][x] = 11
+                    self.lock = False
+                    dist = player_pos.distance_squared_to(pygame.math.Vector2(x * 64, y * 64))
+                    if dist < self.DistanceHighLight:
+                        self.DistanceHighLight = dist
+                        closest = (x, y)
+        if closest:
+            x, y = closest
+            self.TileList[y][x] = 12
+            self.TileList[y - 1][x] = 13
+    
+         
+
      def Grow(self):
          Timer = pygame.time.get_ticks()
          sec = Timer/ 1000
-         print(int(sec))
          if sec >= self.LastTriggered:
-             self.LastTriggered = sec + 60
+             self.LastTriggered = sec + 30
              for y, row in enumerate(self.TileList):
                 for x, tile in enumerate(row):
                     if tile == 5:
@@ -135,4 +185,25 @@ class Generate():
                         if Chance == 2:
                             self.TileList[y][x] = 10
                             self.TileList[y - 1][x] = 11
+     def CutDown(self):
+        for y, row in enumerate(self.TileList):
+            for x, tile in enumerate(row):
+                if tile == 12 :
+                    self.TileList[y][x] = 1
+                    self.TileList[y - 1][x] = 1
+                    self.AddItem("seed")
+                    self.AddItem("Wood")
+     def Plant(self , player):
+         x = int(player.pos.x // 64)
+         Xother = int((player.pos.x + player.width - 1) // 64)
+         y = int(player.pos.y // 64)
+         Yother = int((player.pos.y + player.height - 1) // 64)
+         for y in range(y , Yother + 1):
+            for x in range(x,Xother + 1):
+                if self.HasItem("seed") and self.TileList[y][x] != 5 and self.TileList[y-1][x] != 5 and self.TileList[y+1][x] != 5:
+                    self.TileList[y][x] = 5
+                    self.RemoveItem("seed")
+                
+                
+        
              
