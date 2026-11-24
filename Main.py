@@ -1,3 +1,5 @@
+#Main issues 
+#Make drops random now only one per
 import pygame
 from sys import exit
 import math
@@ -11,6 +13,7 @@ Game = True
 ScreenWidth = screen.get_width()
 ScreenHeight = screen.get_height()
 LoadLock = False
+Building = False
 PlayerSize = (40, 40)
 clock = pygame.time.Clock()
 class Player():
@@ -63,6 +66,9 @@ class Player():
         if Map.CheckTile(player) == "Tree":
                     self.pos = old_pos
                     self.rect.center = self.pos
+        if Map.CheckTile(player) == "Wall":
+                            self.pos = old_pos
+                            self.rect.center = self.pos
     def UpdatePlayer(self):
         self.UserInput()
         self.UpdatePos()
@@ -74,27 +80,35 @@ Camera = Cameraa.Camera(player)
 text_font = pygame.font.SysFont("None" , 30)
 tutorial_font = pygame.font.SysFont("None" , 35)
 big_font = pygame.font.SysFont("None", 40)    
+MASSIVE_font = pygame.font.SysFont("None", 80)  
 def draw_text(text , font , text_color , x ,y ):
     img = font.render(text , True , text_color)
     screen.blit(img,(x,y)) 
 async def main():
-    global Game , player , Map , Camera
+    global Game , player , Map , Camera , Building, ScreenWidth ,ScreenHeight
     while Game:
         screen.fill("black")
         Map.Load(screen, Camera)
         player.UpdatePlayer()
+        Map.LoadLayer2(Camera , screen)
         Camera.camera_draw(Map)
         Map.GenerateWater(screen, Camera, False, 0)
         Map.GenerateWater(screen, Camera, False, 1)
         Map.GenerateWater(screen, Camera, True, 2)
         Map.GenerateWater(screen, Camera, True, 3)
         Map.GenerateWater(screen, Camera, True, 4)
+        if Building:
+            Map.draw_CurrentSelected(screen , (255,255,255) , Camera)
+            draw_text(f"Building", MASSIVE_font, (255,255,255), ScreenWidth / 2.3, 20)
         Map.Grow()
         Map.CheckClose(player.pos)
         screen.blit(player.image, (player.pos.x - Camera.offset.x , player.pos.y - Camera.offset.y))
         draw_text(f"Seeds: {Map.Inventory.get('seed', 0)}", big_font, (0, 150, 0), 20, 20)
         draw_text(f"Wood: {Map.Inventory.get('Wood', 0)}", big_font, (100, 0, 0), 20, 60)
         for event in pygame.event.get():
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                if event.button == 1 and Building:
+                    Map.PlaceBuild(Camera)
             if event.type == pygame.QUIT:
                 Game = False
             if event.type == pygame.KEYDOWN:
@@ -104,10 +118,22 @@ async def main():
                 if event.key == pygame.K_0:
                     Map.GrowAll()
             if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_1 and Building:
+                    Map.CurrentBuild = 14
+                if event.key == pygame.K_2 and Building:
+                    Map.CurrentBuild = 15
+                if event.key == pygame.K_3 and Building:
+                    Map.CurrentBuild = 19
+            if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_e:
                     Map.CutDown()
-                if event.key == pygame.K_9:
+                if event.key == pygame.K_r and not Building:
                     Map.Plant(player)
+                if event.key == pygame.K_r and Building and Map.CurrentBuild == 15 or event.key == pygame.K_r and Building and Map.CurrentBuild == 19 :
+                    Map.WallRotation = (Map.WallRotation + 90) % 360
+                    print(Map.WallRotation)
+                if event.key == pygame.K_b:
+                    Building = not Building
         pygame.display.update()
         await asyncio.sleep(0)
 asyncio.run(main())

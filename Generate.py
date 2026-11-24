@@ -18,7 +18,9 @@ class Generate():
         self.RandomColumn = rng.randint(0, self.Width)
         self.RandomRow = rng.randint(0, self.Height)
         self.ValueAsATileBeing = 0
+        self.WallRotation = 0
         self.TileList = []
+        self.TileListLayer2 = []
         self.Grass1 =  pygame.image.load("TileSet/Sprite-0001.png").convert_alpha()
         self.Grass2 =  pygame.image.load("TileSet/Sprite-0004.png").convert_alpha()
         self.Water =  pygame.image.load("TileSet/Sprite-0005.png").convert_alpha()
@@ -29,10 +31,29 @@ class Generate():
         self.TreeDown = pygame.image.load("TileSet/TreeDown.png").convert_alpha()
         self.TreeUPlight = pygame.image.load("TileSet/TreeUPLIGHT.png").convert_alpha()
         self.TreeDownlight = pygame.image.load("TileSet/TreeDownLIGHT.png").convert_alpha()
+        self.FloorWood = pygame.image.load("TileSet/WoodFloor.png").convert_alpha()
+        self.WallUp = pygame.image.load("TileSet/WallUP.png").convert_alpha()
+        self.Door = pygame.image.load("TileSet/Door.png").convert_alpha()
+        self.WallHorizont = pygame.image.load("TileSet/WallHorizontal.png").convert_alpha()
+        self.CurrentBuild =  -2
         self.AlreadyLoaded = False
         self.lock = False
         self.Inventory = {}
         self.Generate_random()
+        self.GenerateLayer2()
+        self.WallImages = {
+                15: self.WallUp,
+                16: pygame.transform.rotate(self.WallUp, 90),
+                17: pygame.transform.rotate(self.WallUp, 180),
+                18: pygame.transform.rotate(self.WallUp, 270),
+        }
+        self.DoorImages = {
+                        19: self.Door,
+                        20: pygame.transform.rotate(self.Door, 90),
+                        21: pygame.transform.rotate(self.Door, 180),
+                        22: pygame.transform.rotate(self.Door, 270),
+                }
+        self.WallHitboxes = {wall_id: image.get_bounding_rect() for wall_id, image in self.WallImages.items()}
         
      def Generate_random(self):
               for i in range(self.Height):
@@ -48,6 +69,14 @@ class Generate():
                       else :
                         rows.append(que)
                   self.TileList.append(rows)
+    
+     def GenerateLayer2(self):
+        for i in range(self.Height):
+            rows = []
+            for q in range(self.Width) :
+                rows.append(0)
+            self.TileListLayer2.append(rows)
+
      def GenerateWater(self,screen, camera , small, WaterID):
          if not small:
              width = self.waterSizeX
@@ -136,22 +165,32 @@ class Generate():
                           CurrentImage = self.TreeDownlight
                       if q == 13 :
                           CurrentImage = self.TreeUPlight
+                      if q == 14:
+                          CurrentImage = self.FloorWood
                       screen.blit(CurrentImage, (CurrentTile[0]- camera.offset.x ,CurrentTile[1]- camera.offset.y ))
                       CurrentTile[0] += 64 
                  CurrentTile[1] += 64
-                 CurrentTile[0] = 0 
+                 CurrentTile[0] = 0
+
      def CheckTile(self, player):
-         x = int(player.pos.x // 64)
+         StartX = int(player.pos.x // 64)
          Xother = int((player.pos.x + player.width - 1) // 64)
-         y = int(player.pos.y // 64)
+         StartY = int(player.pos.y // 64)
          Yother = int((player.pos.y + player.height - 1) // 64)
-         for y in range(y , Yother + 1):
-             for x in range(x,Xother + 1):
-                if self.TileList[y][x] == -1:
-                    return "Water"
+         PlayerRect = pygame.Rect(player.pos.x, player.pos.y, player.width, player.height)
+         for y in range(StartY, Yother + 1):
+             for x in range(StartX, Xother + 1):
+                wall_id = self.TileListLayer2[y][x]
+                if wall_id in self.WallHitboxes:
+                    box = self.WallHitboxes[wall_id].move(x * 64, y * 64)
+                    if PlayerRect.colliderect(box):
+                        return "Wall"
                 if self.TileList[y][x] == 10 or self.TileList[y][x] == 11 or  self.TileList[y][x] == 12 or self.TileList[y][x] == 13:
                     return "Tree"
-         return "NONE"
+                if self.TileList[y][x] == -1:
+                    return "Water"
+         return False
+     
      def CheckClose(self, pos):
         self.DistanceHighLight = 30000
         closest = None
@@ -171,8 +210,6 @@ class Generate():
             self.TileList[y][x] = 12
             self.TileList[y - 1][x] = 13
     
-         
-
      def Grow(self):
          Timer = pygame.time.get_ticks()
          sec = Timer/ 1000
@@ -185,6 +222,7 @@ class Generate():
                         if Chance == 2:
                             self.TileList[y][x] = 10
                             self.TileList[y - 1][x] = 11
+    
      def CutDown(self):
         for y, row in enumerate(self.TileList):
             for x, tile in enumerate(row):
@@ -193,6 +231,7 @@ class Generate():
                     self.TileList[y - 1][x] = 1
                     self.AddItem("seed")
                     self.AddItem("Wood")
+
      def Plant(self , player):
          x = int(player.pos.x // 64)
          Xother = int((player.pos.x + player.width - 1) // 64)
@@ -200,10 +239,59 @@ class Generate():
          Yother = int((player.pos.y + player.height - 1) // 64)
          for y in range(y , Yother + 1):
             for x in range(x,Xother + 1):
-                if self.HasItem("seed") and self.TileList[y][x] != 5 and self.TileList[y-1][x] != 5 and self.TileList[y+1][x] != 5:
+                if self.HasItem("seed") and self.TileList[y][x] != 5 and self.TileList[y-1][x] != 5 and self.TileList[y+1][x] != 5 and self.TileList[y-1][x] != 14 and self.TileList[y][x] != 14:
                     self.TileList[y][x] = 5
                     self.RemoveItem("seed")
-                
-                
+     
+     def draw_CurrentSelected(self ,screen , colour , camera):
+        CurrentImage = None
+        mouseX, mouseY = pygame.mouse.get_pos()
+        tileX = int((mouseX + camera.offset.x) // 64)
+        tileY = int((mouseY + camera.offset.y) // 64)
+        rect = (tileX * 64 - camera.offset.x, tileY * 64 - camera.offset.y, 64, 64)
+        pygame.draw.rect(screen, colour, rect, 2)
+        if self.CurrentBuild == -2:
+            return
+        elif self.CurrentBuild == 14:
+            CurrentImage = self.FloorWood
+        elif self.CurrentBuild == 15:
+             CurrentImage = self.WallImages[15 + self.WallRotation // 90]
+        elif self.CurrentBuild == 19:
+            CurrentImage = self.DoorImages[19 + self.WallRotation // 90]
+        Preview = CurrentImage.copy()
+        Preview.set_alpha(120)
+        screen.blit(Preview,(tileX * 64 - camera.offset.x,tileY * 64 - camera.offset.y))
+
+     def PlaceBuild(self,camera):
+         if self.CurrentBuild in (14 , 15 , 16) :
+             if not self.HasItem("Wood") or self.CurrentBuild == -2:
+                 return
+         mouseX, mouseY = pygame.mouse.get_pos()
+         tileX = int((mouseX + camera.offset.x) // 64)
+         tileY = int((mouseY + camera.offset.y) // 64)
+         if self.TileList[tileY][tileX] in (-1 , 5 , 10 , 11, 12 ,13) or self.CurrentBuild == 14 and self.TileList[tileY][tileX] ==14 :
+             return
+         if self.CurrentBuild == 14 : 
+            self.TileList[tileY][tileX] = self.CurrentBuild
+         elif self.CurrentBuild == 15:
+                self.TileListLayer2[tileY][tileX] = 15 + self.WallRotation // 90
+         elif self.CurrentBuild == 19:
+                if self.TileListLayer2[tileY-1][tileX] in (15,16,17,18) or self.TileListLayer2[tileY+1][tileX] in (15,16,17,18) or self.TileListLayer2[tileY][tileX -1] in (15,16,17,18) or self.TileListLayer2[tileY][tileX + 1] in (15,16,17,18):
+                      self.TileListLayer2[tileY][tileX] = 19 + self.WallRotation // 90
+         if self.CurrentBuild in (14 , 15 , 16) : 
+                self.RemoveItem("Wood")
+     
+     def LoadLayer2(self, camera, screen):
+      CurrentImage = 0 
+      for y, row in enumerate(self.TileListLayer2):
+        for x, q in enumerate(row):
+            if q == 0:
+                continue
+            if q in self.WallImages:
+                screen.blit(self.WallImages[q],(x * 64 - camera.offset.x, y * 64 - camera.offset.y))
+            elif q in self.DoorImages:
+                screen.blit(self.DoorImages[q],(x * 64 - camera.offset.x, y * 64 - camera.offset.y))
+            else:
+                screen.blit(CurrentImage,(x * 64 - camera.offset.x,y * 64 - camera.offset.y))
         
              
