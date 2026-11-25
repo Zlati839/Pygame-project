@@ -1,5 +1,5 @@
 #Main issues 
-#Make drops random now only one per
+#Make drops random not only one per
 import pygame
 from sys import exit
 import math
@@ -14,6 +14,7 @@ ScreenWidth = screen.get_width()
 ScreenHeight = screen.get_height()
 LoadLock = False
 Building = False
+DraggingForward = False
 PlayerSize = (40, 40)
 clock = pygame.time.Clock()
 class Player():
@@ -73,10 +74,30 @@ class Player():
         self.UserInput()
         self.UpdatePos()
 
+class Inventory():
+     def __init__(self ):
+        self.BackPack = pygame.image.load("TileSet/BakcPack.png").convert_alpha()
+        self.rectBackPack = self.BackPack.get_rect(topleft = (0,50))
+        self.Inventory = pygame.image.load("TileSet/Inventory.png").convert_alpha()
+        self.rectInvetory = self.Inventory.get_rect(topleft=(self.rectBackPack.x - self.Inventory.get_width(),self.rectBackPack.y))
+        self.Limit = self.Inventory.get_width() + self.rectBackPack.x
+     def DragForward(self,rect , target, Start):
+          if DraggingForward:
+            if rect.x < target:
+              rect.x += 7
+            else:
+             rect.x = target
+          elif not DraggingForward:
+             if rect.x > Start:
+                rect.x -= 7
+             else:
+                rect.x = Start
+     def UpdateInventory(self):
+         self.rectInvetory.topleft = (self.rectBackPack.x - self.Inventory.get_width(),self.rectBackPack.y)
 player = Player(100 , 100)
 Map = Generate()
 Camera = Cameraa.Camera(player)
-
+inventory = Inventory()
 text_font = pygame.font.SysFont("None" , 30)
 tutorial_font = pygame.font.SysFont("None" , 35)
 big_font = pygame.font.SysFont("None", 40)    
@@ -85,30 +106,37 @@ def draw_text(text , font , text_color , x ,y ):
     img = font.render(text , True , text_color)
     screen.blit(img,(x,y)) 
 async def main():
-    global Game , player , Map , Camera , Building, ScreenWidth ,ScreenHeight
+    global Game , player , Map , Camera , Building, ScreenWidth ,ScreenHeight , DraggingForward
     while Game:
         screen.fill("black")
         Map.Load(screen, Camera)
         player.UpdatePlayer()
         Map.LoadLayer2(Camera , screen)
+        screen.blit(player.image, (player.pos.x - Camera.offset.x , player.pos.y - Camera.offset.y))
+        Map.LoadLayer3(Camera, screen)
         Camera.camera_draw(Map)
         Map.GenerateWater(screen, Camera, False, 0)
         Map.GenerateWater(screen, Camera, False, 1)
         Map.GenerateWater(screen, Camera, True, 2)
         Map.GenerateWater(screen, Camera, True, 3)
         Map.GenerateWater(screen, Camera, True, 4)
+        inventory.UpdateInventory()
+        inventory.DragForward(inventory.rectBackPack , inventory.Limit , 0)
+        screen.blit(inventory.Inventory , inventory.rectInvetory)
+        screen.blit(inventory.BackPack , inventory.rectBackPack)
         if Building:
             Map.draw_CurrentSelected(screen , (255,255,255) , Camera)
             draw_text(f"Building", MASSIVE_font, (255,255,255), ScreenWidth / 2.3, 20)
         Map.Grow()
         Map.CheckClose(player.pos)
-        screen.blit(player.image, (player.pos.x - Camera.offset.x , player.pos.y - Camera.offset.y))
-        draw_text(f"Seeds: {Map.Inventory.get('seed', 0)}", big_font, (0, 150, 0), 20, 20)
-        draw_text(f"Wood: {Map.Inventory.get('Wood', 0)}", big_font, (100, 0, 0), 20, 60)
+        #draw_text(f"Seeds: {Map.Inventory.get('seed', 0)}", big_font, (0, 150, 0), 20, 20)
+        #draw_text(f"Wood: {Map.Inventory.get('Wood', 0)}", big_font, (100, 0, 0), 20, 60)
         for event in pygame.event.get():
             if event.type == pygame.MOUSEBUTTONDOWN:
                 if event.button == 1 and Building:
                     Map.PlaceBuild(Camera)
+                if event.button == 1 and inventory.rectBackPack.collidepoint(event.pos):
+                    DraggingForward = not DraggingForward 
             if event.type == pygame.QUIT:
                 Game = False
             if event.type == pygame.KEYDOWN:
@@ -124,6 +152,8 @@ async def main():
                     Map.CurrentBuild = 15
                 if event.key == pygame.K_3 and Building:
                     Map.CurrentBuild = 19
+                if event.key == pygame.K_4 and Building:
+                    Map.CurrentBuild = 30
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_e:
                     Map.CutDown()
